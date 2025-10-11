@@ -2,8 +2,9 @@
 
 namespace TaskManager\Classes;
 
+require_once ROOT . '/lib/enums/TaskStatus.php';
+
 use TaskManager\Enums\TaskStatus;
-use TaskManager\Interfaces\TaskManagerInterface;
 
 class Task
 {
@@ -13,7 +14,7 @@ class Task
     private \DateTime $createdAt;
     public \DateTime $updatedAt;
 
-    private const string DATE_FORMAT = 'Y-m-d H:i:s';
+    private const  DATE_FORMAT = 'Y-m-d H:i:s';
 
     public function __construct(
         $id,
@@ -29,7 +30,7 @@ class Task
         $this->updatedAt = $updatedAt;
     }
 
-    public function __serialize(): array
+    public function getData(): array
     {
         return [
             "id" => $this->id,
@@ -38,14 +39,5 @@ class Task
             "createdAt" => $this->createdAt->format(self::DATE_FORMAT),
             "updatedAt" => $this->updatedAt->format(self::DATE_FORMAT),
         ];
-    }
-
-    public function __unserialize(array $data)
-    {
-        $this->id = $data["id"];
-        $this->description = $data["description"];
-        $this->status = $data["status"];
-        $this->createdAt = $data["createdAt"];
-        $this->updatedAt = $data["updatedAt"];
     }
 }

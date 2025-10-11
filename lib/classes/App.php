@@ -14,10 +14,10 @@ class App
         $this->manager = $manager;
     }
 
-    public function executeCommand(Command $command, $fields)
+    public function executeCommand(Command $command, array $fields = [])
     {
         $result = match ($command) {
-            Command::Add => $this->manager->create($fields),
+            Command::Add => $this->manager->create($fields[0]),
             Command::Update => $this->manager->update($fields),
             Command::List => $this->manager->getList($fields),
             Command::Delete => $this->manager->delete($fields),
@@ -25,6 +25,6 @@ class App
             Command::MarkInProgress => $this->manager->markInProgress($fields)
         };
 
-        return $result;
+        echo $result;
     }
 }

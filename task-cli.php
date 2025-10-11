@@ -22,7 +22,6 @@ try {
     $fields = array_slice($argv, 2);
 
     $app->executeCommand($command, $fields);
-    print_r($argv);
 } catch (Exception $exception) {
     echo $exception->getMessage();
 }
