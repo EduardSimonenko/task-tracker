@@ -15,7 +15,7 @@ try {
     $app = new App($taskManager);
 
     if ($argc < 2) {
-        throw new Error("Usage: php script.php <command> [argv...]\n");
+        throw new Exception("Usage: php script.php <command> [argv...]" . PHP_EOL);
     }
 
     $command = Command::from($argv[1]);
@@ -23,5 +23,5 @@ try {
 
     $app->executeCommand($command, $fields);
 } catch (Exception $exception) {
-    echo $exception->getMessage();
+    echo $exception->getMessage() . PHP_EOL;
 }

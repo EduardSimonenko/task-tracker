@@ -14,7 +14,10 @@ class App
         $this->manager = $manager;
     }
 
-    public function executeCommand(Command $command, array $fields = [])
+    /**
+     * @throws CommandException
+     */
+    public function executeCommand(Command $command, array $fields = []): void
     {
         $result = match ($command) {
             Command::Add => $this->manager->create($fields[0]),

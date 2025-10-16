@@ -4,9 +4,12 @@ namespace TaskManager\Classes;
 
 require_once ROOT . '/lib/interfaces/TaskManagerInterface.php';
 require_once ROOT . '/lib/enums/TaskStatus.php';
+require_once ROOT . '/lib/enums/CommandExceptionCase.php';
 require_once ROOT . '/lib/classes/Task.php';
+require_once ROOT . '/lib/classes/CommandException.php';
 
 use TaskManager\Enums\TaskStatus;
+use TaskManager\Enums\CommandExceptionCase;
 use TaskManager\Interfaces\TaskManagerInterface;
 
 class JsonTaskManager implements TaskManagerInterface
@@ -27,40 +30,41 @@ class JsonTaskManager implements TaskManagerInterface
         $this->lastKey = !empty($lastItem) ? ++$lastItem["id"] : 0;
     }
 
-    public function create(string $string)
+    /**
+     * @throws CommandException
+     */
+    public function create(string $string): string
     {
         $this->tasks[] = (new Task($this->lastKey, $string))->getData();
-        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
-            throw new \Error("Failed to write to $this->path");
-        }
+        $this->saveData();
 
         return "Task added successfully (ID: $this->lastKey)\n";
     }
 
-    public function update($fields)
+    /**
+     * @throws CommandException
+     */
+    public function update($fields): string
     {
         if (count($fields) < 2) {
-            throw new \Error("Missing arguments");
+            throw new CommandException(CommandExceptionCase::MissingArguments);
         }
 
         [$id, $description] = $fields;
-
-        $searchKey = array_search($id, array_column($this->tasks, 'id'));
-        if (!$searchKey) {
-            throw new \Error("Unknown task id: $id");
+        $searchKey = array_search((int)$id, array_column($this->tasks, 'id'));
+        if ($searchKey === false) {
+            throw new CommandException(CommandExceptionCase::UnknownTask, $id);
         }
 
         $this->tasks[$searchKey]["description"] = $description;
         $this->tasks[$searchKey]["updatedAt"] = (new \DateTime())->format(self::DATE_FORMAT);
 
-        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
-            throw new \Error("Failed to write to $this->path");
-        }
+        $this->saveData();
 
         return "Task updated successfully (ID: $id)\n";
     }
 
-    public function getList($fields)
+    public function getList($fields): bool|string
     {
         [$status] = $fields;
         if (!empty($status) && !TaskStatus::tryFrom($status)) {
@@ -72,70 +76,73 @@ class JsonTaskManager implements TaskManagerInterface
         return json_encode($result, JSON_PRETTY_PRINT);
     }
 
-    public function delete($fields)
+    /**
+     * @throws CommandException
+     */
+    public function delete($fields): string
     {
         [$id] = $fields;
-        if (!$id) {
-            throw new \Error("Missing arguments");
+        if (!isset($id)) {
+            throw new CommandException(CommandExceptionCase::MissingArguments);
         }
 
         $searchKey = array_search($id, array_column($this->tasks, 'id'));
-        if (!$searchKey) {
-            throw new \Error("Unknown task id: $id");
+        if ($searchKey === false) {
+            throw new CommandException(CommandExceptionCase::UnknownTask, $id);
         }
 
         array_splice($this->tasks, $searchKey, 1);
 
-        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
-            throw new \Error("Failed to write to $this->path");
-        }
+        $this->saveData();
 
         return "Task deleted successfully (ID: $id)\n";
     }
 
-    public function markDone($fields)
+    /**
+     * @throws CommandException
+     */
+    public function markDone($fields): string
     {
         [$id] = $fields;
-        if (!$id) {
-            throw new \Error("Missing arguments");
+        if (!isset($id)) {
+            throw new CommandException(CommandExceptionCase::MissingArguments);
         }
 
         $searchKey = array_search($id, array_column($this->tasks, 'id'));
-        if (!$searchKey) {
-            throw new \Error("Unknown task id: $id");
+        if ($searchKey === false) {
+            throw new CommandException(CommandExceptionCase::UnknownTask, $id);
         }
 
         $this->tasks[$searchKey]["status"] = TaskStatus::Done->value;
 
-        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
-            throw new \Error("Failed to write to $this->path");
-        }
+        $this->saveData();
 
         return "Task done successfully (ID: $id)\n";
     }
 
-    public function markInProgress($fields)
+    /**
+     * @throws CommandException
+     */
+    public function markInProgress($fields): string
     {
         [$id] = $fields;
-        if (!$id) {
-            throw new \Error("Missing arguments");
+        if (!isset($id)) {
+            throw new CommandException(CommandExceptionCase::MissingArguments);
         }
 
         $searchKey = array_search($id, array_column($this->tasks, 'id'));
-        if (!$searchKey) {
-            throw new \Error("Unknown task id: $id");
+        if ($searchKey === false) {
+            throw new CommandException(CommandExceptionCase::UnknownTask, $id);
         }
 
         $this->tasks[$searchKey]["status"] = TaskStatus::InProgress->value;
 
-        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
-            throw new \Error("Failed to write to $this->path");
-        }
+        $this->saveData();
 
         return "Task done successfully (ID: $id)\n";
     }
 
-    private function ensureFileExists($path)
+    private function ensureFileExists($path): void
     {
         $directory = dirname($path);
         if (!is_dir($directory)) {
@@ -144,6 +151,16 @@ class JsonTaskManager implements TaskManagerInterface
 
         if (!file_exists($path)) {
             file_put_contents($path, json_encode([]));
+        }
+    }
+
+    /**
+     * @throws CommandException
+     */
+    private function saveData(): void
+    {
+        if (!file_put_contents($this->path, json_encode($this->tasks, JSON_PRETTY_PRINT))) {
+            throw new CommandException(CommandExceptionCase::FailedSave, $this->path);
         }
     }
 }
